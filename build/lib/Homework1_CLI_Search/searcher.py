@@ -31,6 +31,7 @@ def initial_search(search_phrase: 'str', search_url: str, inpunt_id: str, result
     except TimeoutException as e:
         if DEBUG:
             print(e)
+        pass
     html_body = browser.page_source
     browser.close()
     return html_body
@@ -96,21 +97,17 @@ class Logger():
         to_log = None
         if cls.__log_format == 'json':
             to_log = json.dumps(cls.__data)
-            cls._wirte_to_file(to_log)
         elif cls.__log_format == 'csv':
             to_log = ''
             for item in cls.__data:
                 to_log += f"{item}, {cls.__data[item]}\n"
-            cls._wirte_to_file(to_log)
+        if cls.__log_format:
+            with open(cls.__log_file, 'w') as file:
+                file.write(to_log)
         else:
             print('Results found:\n')
             for item in cls.__data:
                 print(item, ':', cls.__data[item])
-
-    @classmethod
-    def _wirte_to_file(cls, to_log):
-        with open(cls.__log_file, 'w') as file:
-            file.write(to_log)
 
 
 class Searcher:
@@ -122,10 +119,11 @@ class Searcher:
         self.log_file = log_file
         self.found_results = {}
         self.response = None
-        Logger(log_file)  # initing logger if didn`t call before
+        Logger(log_file) # initing logger if didn`t call before
         self._requesting()
         self._parsing()
         self._building_pool()
+
 
     def _requesting(self):
         if DEBUG:
@@ -164,6 +162,7 @@ class Searcher:
             Searcher(url, self.recursion_depth - 1, self.number_of_searches)
 
 
+
 def main():
     # Building CLI and parsing arguments
     parser = argparse.ArgumentParser()
@@ -179,6 +178,7 @@ def main():
                              'Logging to console by default')
     args = parser.parse_args()
     start_key_words = ' '.join(args.request.split('_'))
+    initial_data = None
     if args.engine.lower() == 'yandex.ru':
         initial_data = (start_key_words, 'https://ya.ru', 'text',)
     elif args.engine.lower() == 'duckduckgo.com':
