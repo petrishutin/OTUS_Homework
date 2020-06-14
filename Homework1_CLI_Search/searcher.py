@@ -31,7 +31,6 @@ def initial_search(search_phrase: 'str', search_url: str, inpunt_id: str, result
     except TimeoutException as e:
         if DEBUG:
             print(e)
-        pass
     html_body = browser.page_source
     browser.close()
     return html_body
@@ -46,7 +45,7 @@ def parse_yandex(html_body: str) -> dict:
         if not isinstance(to_add, str):
             continue
         if to_add.find('http') != -1 and to_add.find('yandex') == -1:  # filtering urls from service links
-            found_results[link.text] = to_add
+            found_results[link.text.strip()] = to_add
     return found_results
 
 
@@ -60,11 +59,11 @@ def parse_duckduckgo(html_body: str) -> dict:
         if not isinstance(to_add, str):
             continue
         if to_add.find('http') != -1:
-            found_results[link.text] = to_add
+            found_results[link.text.strip()] = to_add
     return found_results
 
 
-class Logger:
+class Logger():
     """Singleton class to store and log results of search"""
     __data = dict()
     __log_file = None
@@ -97,34 +96,40 @@ class Logger:
         to_log = None
         if cls.__log_format == 'json':
             to_log = json.dumps(cls.__data)
+            cls._wirte_to_file(to_log)
         elif cls.__log_format == 'csv':
             to_log = ''
             for item in cls.__data:
                 to_log += f"{item}, {cls.__data[item]}\n"
-        if cls.__log_format:
-            with open(cls.__log_file, 'w') as file:
-                file.write(to_log)
+            cls._wirte_to_file(to_log)
         else:
             print('Results found:\n')
             for item in cls.__data:
                 print(item, ':', cls.__data[item])
 
+    @classmethod
+    def _wirte_to_file(cls, to_log):
+        with open(cls.__log_file, 'w') as file:
+            file.write(to_log)
+
 
 class Searcher:
-    def __init__(self, url: str, recursion_depth: int, number_of_searches: int, log_file: str = None):
 
+    def __init__(self, url: str, recursion_depth: int, number_of_searches: int, log_file: str = None):
         self.url = url
         self.recursion_depth = recursion_depth
         self.number_of_searches = number_of_searches
         self.log_file = log_file
         self.found_results = {}
         self.response = None
-        Logger(log_file)
+        Logger(log_file)  # initing logger if didn`t call before
         self._requesting()
         self._parsing()
         self._building_pool()
 
     def _requesting(self):
+        if DEBUG:
+            print(f'Requesting {self.url}')
         try:
             self.response = requests.get(self.url)
         except (requests.exceptions.MissingSchema,
@@ -139,27 +144,28 @@ class Searcher:
         # Checking if response is not None and if status code in success range 2**
         if not self.response or not 199 < self.response.status_code < 300:
             return
-
         html_body = self.response.text
         parser = BeautifulSoup(html_body, "html.parser")
         links = parser.findAll('a')
+        number_of_instances = self.number_of_searches
         for link in links:
-            self.found_results[link.text.strip()] = link.get('href')
+            if number_of_instances:
+                self.found_results[link.text.strip()] = link.get('href')
+            else:
+                break
+            number_of_instances -= 1
         if self.found_results:
             Logger.add(self.found_results)
 
     def _building_pool(self) -> None:
-        if self.recursion_depth == 1 or self.number_of_searches > 1:
+        if self.recursion_depth == 1 or self.number_of_searches < 1:
             return
-        number_of_instances = self.number_of_searches
         for url in self.found_results.values():
-            if number_of_instances:
-                Searcher(url, self.recursion_depth - 1, self.number_of_searches)
-            number_of_instances -= 1
+            Searcher(url, self.recursion_depth - 1, self.number_of_searches)
 
 
 def main():
-    # Building CLI
+    # Building CLI and parsing arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('request', type=str, help="Input your request. Use '_' for spaces between words;")
     parser.add_argument('-e', '--engine', type=str, default='yandex.ru',
@@ -188,7 +194,7 @@ def main():
     if number_of_searches < 1:
         sys.exit('Numbers of search must be positive integer')
 
-    # Main
+    # Calling main functionality
     Logger(log_file)
     initial_search_body = initial_search(*initial_data)
     if args.engine == 'duckduckgo.com':
