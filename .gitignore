@@ -1,5 +1,8 @@
 .idea
 venv
+Homework1_CLI_Search/build
+Homework1_CLI_Search/dist
+Homework1_CLI_Search/ishutin_otus_homework1_cli_searcher.egg-info
 OTUS_Homework.iml
 Homework1_CLI_Search/Homework1_CLI_Search.iml
 Homework1_CLI_Search/geckodriver.log

@@ -11,8 +11,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 setup(
     name='ishutin_otus_homework1_cli_searcher',
     version='0.1',
-    # packages=find_packages(),
-    packages=['Homework1_CLI_Search'],
+    packages=['searcher'],
     include_package_data=True,
     license='GNU General Public License v3.0',
     description='Allow to make web search requests from command line',
@@ -42,7 +41,7 @@ setup(
      ],
     entry_points={
         'console_scripts': [
-            'searcher = Homework1_CLI_Search.searcher:main',
+            'searcher = sercher.searcher:main',
         ]
     },
 )
